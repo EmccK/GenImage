@@ -143,8 +143,23 @@ docker compose up -d
    ```
    随后浏览器访问 `http://localhost:5173`。
 
-3. **开发环境跨域代理（可选）**
-   如果你的图片接口节点没有放开浏览器跨域，先复制示例配置：
+3. **本地开发跨域代理（可选）**
+   如果你的图片接口没有放开浏览器跨域，前端直接请求接口时可能会被浏览器的 CORS 策略拦截。这个可选代理用于本地开发调试：浏览器先请求同源的 Vite 开发服务器，再由 Vite 开发服务器转发到真实接口。
+
+   请求链路如下：
+
+   ```text
+   浏览器页面 http://localhost:5173
+     -> 同源请求 http://localhost:5173/api-proxy/v1/images/generations
+     -> Vite 开发服务器代理转发
+     -> 真实接口 http://127.0.0.1:3000/v1/images/generations
+   ```
+
+   这样浏览器看到的是同源请求，实际跨域请求发生在 Vite 开发服务器这一侧，从而绕开浏览器 CORS 限制。
+
+   注意：这个代理只在 `npm run dev` 启动的 Vite 开发服务器中生效。它不会打包进静态产物，也不会在 Vercel、GitHub Pages 或普通 Nginx 静态部署中生效。
+
+   先复制示例配置：
    ```bash
    cp dev-proxy.config.example.json dev-proxy.config.json
    ```
@@ -158,7 +173,17 @@ docker compose up -d
      "secure": false
    }
    ```
-   然后在页面设置中的 `API URL` 填入与 `target` 相同的地址。开发服务器会把请求改写为同源代理路径，例如 `/api-proxy/v1/images/generations`，从而绕开浏览器 CORS 限制。
+   配置含义：
+
+   - `enabled`：是否启用本地开发代理。
+   - `prefix`：前端同源请求使用的代理路径前缀。
+   - `target`：真实图片接口地址，也就是 Vite 开发服务器要转发到的后端。
+   - `changeOrigin`：转发时是否把请求头中的 `Host` 改成 `target` 的主机名，通常建议保持 `true`。
+   - `secure`：当 `target` 是 HTTPS 时是否校验证书；本地自签名证书可设为 `false`。
+
+   修改配置后需要重新启动开发服务器，并在页面设置中的 `API URL` 填入与 `target` 相同的地址。当前端发现 `API URL` 与 `target` 匹配时，会把请求改写为 `prefix` 开头的同源地址，例如 `/api-proxy/v1/images/generations`。
+
+   如果需要在线上部署中使用代理，请使用 Vercel Function、Cloudflare Worker、Nginx 反向代理或自建后端等服务端方案。
 
 4. **构建静态产物**
    ```bash

@@ -4,7 +4,6 @@ import { readFileSync } from 'fs'
 import { normalizeDevProxyConfig } from './src/lib/devProxy'
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'))
-const devProxyConfig = loadDevProxyConfig()
 
 function loadDevProxyConfig() {
   try {
@@ -18,29 +17,33 @@ function loadDevProxyConfig() {
   }
 }
 
-export default defineConfig(({ command }) => ({
-  plugins: [react()],
-  base: './',
-  define: {
-    __APP_VERSION__: JSON.stringify(pkg.version),
-    __DEV_PROXY_CONFIG__: JSON.stringify(command === 'serve' ? devProxyConfig : null),
-  },
-  server: {
-    host: true,
-    proxy:
-      devProxyConfig?.enabled
-        ? {
-            [devProxyConfig.prefix]: {
-              target: devProxyConfig.target,
-              changeOrigin: devProxyConfig.changeOrigin,
-              secure: devProxyConfig.secure,
-              rewrite: (path) =>
-                path.replace(
-                  new RegExp(`^${devProxyConfig.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
-                  '',
-                ),
-            },
-          }
-        : undefined,
-  },
-}))
+export default defineConfig(({ command }) => {
+  const devProxyConfig = command === 'serve' ? loadDevProxyConfig() : null
+
+  return {
+    plugins: [react()],
+    base: './',
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      __DEV_PROXY_CONFIG__: JSON.stringify(devProxyConfig),
+    },
+    server: {
+      host: true,
+      proxy:
+        devProxyConfig?.enabled
+          ? {
+              [devProxyConfig.prefix]: {
+                target: devProxyConfig.target,
+                changeOrigin: devProxyConfig.changeOrigin,
+                secure: devProxyConfig.secure,
+                rewrite: (path) =>
+                  path.replace(
+                    new RegExp(`^${devProxyConfig.prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+                    '',
+                  ),
+              },
+            }
+          : undefined,
+    },
+  }
+})
