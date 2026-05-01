@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-import { initStore } from './store'
-import { useStore } from './store'
+import { useCallback, useEffect, useState } from 'react'
+import { initStore, useStore } from './store'
 import { normalizeBaseUrl } from './lib/api'
 import type { ApiMode } from './types'
 import { loadServerConfig, loginToServer, logoutFromServer, type ServerConfig } from './lib/serverClient'
@@ -23,6 +22,63 @@ export default function App() {
   const [booted, setBooted] = useState(false)
   const [serverConfig, setServerConfig] = useState<ServerConfig | null>(null)
 
+  const applyServerState = useCallback(async (config: ServerConfig, withSearchParams = false) => {
+    const searchParams = withSearchParams ? new URLSearchParams(window.location.search) : null
+    const nextSettings: { baseUrl?: string; apiKey?: string; codexCli?: boolean; apiMode?: ApiMode } = {}
+
+    const apiUrlParam = searchParams?.get('apiUrl')
+    if (apiUrlParam !== undefined && apiUrlParam !== null) {
+      nextSettings.baseUrl = normalizeBaseUrl(apiUrlParam.trim())
+    }
+
+    const apiKeyParam = searchParams?.get('apiKey')
+    if (apiKeyParam !== undefined && apiKeyParam !== null) {
+      nextSettings.apiKey = apiKeyParam.trim()
+    }
+
+    const codexCliParam = searchParams?.get('codexCli')
+    if (codexCliParam !== undefined && codexCliParam !== null) {
+      nextSettings.codexCli = codexCliParam.trim().toLowerCase() === 'true'
+    }
+
+    const apiModeParam = searchParams?.get('apiMode')
+    if (apiModeParam === 'images' || apiModeParam === 'responses') {
+      nextSettings.apiMode = apiModeParam
+    }
+
+    setSettings({
+      ...(config.defaultSettings ?? {}),
+      ...nextSettings,
+      ...(config.lockSettings ? config.lockedSettings : {}),
+    })
+    if (config.lockParams && config.lockedParams) {
+      setParams(config.lockedParams)
+    }
+
+    if (
+      searchParams &&
+      (searchParams.has('apiUrl') || searchParams.has('apiKey') || searchParams.has('codexCli') || searchParams.has('apiMode'))
+    ) {
+      searchParams.delete('apiUrl')
+      searchParams.delete('apiKey')
+      searchParams.delete('codexCli')
+      searchParams.delete('apiMode')
+
+      const nextSearch = searchParams.toString()
+      const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`
+      window.history.replaceState(null, '', nextUrl)
+    }
+
+    await initStore()
+  }, [setParams, setSettings])
+
+  const refreshServerState = useCallback(async () => {
+    const config = await loadServerConfig()
+    setServerConfig(config)
+    if (config.authEnabled && !config.authenticated) return
+    await applyServerState(config)
+  }, [applyServerState])
+
   useEffect(() => {
     let cancelled = false
 
@@ -36,50 +92,7 @@ export default function App() {
         return
       }
 
-      const searchParams = new URLSearchParams(window.location.search)
-      const nextSettings: { baseUrl?: string; apiKey?: string; codexCli?: boolean; apiMode?: ApiMode } = {}
-
-      const apiUrlParam = searchParams.get('apiUrl')
-      if (apiUrlParam !== null) {
-        nextSettings.baseUrl = normalizeBaseUrl(apiUrlParam.trim())
-      }
-
-      const apiKeyParam = searchParams.get('apiKey')
-      if (apiKeyParam !== null) {
-        nextSettings.apiKey = apiKeyParam.trim()
-      }
-
-      const codexCliParam = searchParams.get('codexCli')
-      if (codexCliParam !== null) {
-        nextSettings.codexCli = codexCliParam.trim().toLowerCase() === 'true'
-      }
-
-      const apiModeParam = searchParams.get('apiMode')
-      if (apiModeParam === 'images' || apiModeParam === 'responses') {
-        nextSettings.apiMode = apiModeParam
-      }
-
-      setSettings({
-        ...(config.defaultSettings ?? {}),
-        ...nextSettings,
-        ...(config.lockSettings ? config.lockedSettings : {}),
-      })
-      if (config.lockParams && config.lockedParams) {
-        setParams(config.lockedParams)
-      }
-
-      if (searchParams.has('apiUrl') || searchParams.has('apiKey') || searchParams.has('codexCli') || searchParams.has('apiMode')) {
-        searchParams.delete('apiUrl')
-        searchParams.delete('apiKey')
-        searchParams.delete('codexCli')
-        searchParams.delete('apiMode')
-
-        const nextSearch = searchParams.toString()
-        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`
-        window.history.replaceState(null, '', nextUrl)
-      }
-
-      await initStore()
+      await applyServerState(config, true)
       if (!cancelled) setBooted(true)
     }
 
@@ -87,7 +100,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [setParams, setSettings])
+  }, [applyServerState])
 
   useEffect(() => {
     const preventPageImageDrag = (e: DragEvent) => {
@@ -100,15 +113,26 @@ export default function App() {
     return () => document.removeEventListener('dragstart', preventPageImageDrag)
   }, [])
 
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refreshServerState()
+    }
+    const refreshFromPageCache = (event: PageTransitionEvent) => {
+      if (event.persisted) void refreshServerState()
+    }
+
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    window.addEventListener('pageshow', refreshFromPageCache)
+    return () => {
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+      window.removeEventListener('pageshow', refreshFromPageCache)
+    }
+  }, [refreshServerState])
+
   const handleLogin = async (payload: { username?: string; password: string }) => {
     const config = await loginToServer(payload)
     setServerConfig(config)
-    setSettings({
-      ...(config.defaultSettings ?? {}),
-      ...(config.lockSettings ? config.lockedSettings : {}),
-    })
-    if (config.lockParams && config.lockedParams) setParams(config.lockedParams)
-    await initStore()
+    await applyServerState(config)
   }
 
   const handleLogout = async () => {

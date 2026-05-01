@@ -269,6 +269,7 @@ function normalizeGenerationLimit(value) {
 }
 
 function generationLimitOf(user) {
+  if (!user || user.generationLimit == null || user.generationLimit === '') return null
   const n = Number(user?.generationLimit)
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null
 }
