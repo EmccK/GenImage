@@ -117,8 +117,8 @@ export default function App() {
     const refreshWhenVisible = () => {
       if (document.visibilityState === 'visible') void refreshServerState()
     }
-    const refreshFromPageCache = (event: PageTransitionEvent) => {
-      if (event.persisted) void refreshServerState()
+    const refreshFromPageCache = () => {
+      void refreshServerState()
     }
 
     document.addEventListener('visibilitychange', refreshWhenVisible)

@@ -325,12 +325,13 @@ function normalizeParamsForSettings(params: TaskParams, settings: AppSettings): 
 /** 初始化：从 IndexedDB 加载任务和图片缓存，清理孤立图片 */
 export async function initStore() {
   useStore.getState().setStorageReady(false)
+  const serverStorage = isServerStorageEnabled()
   const tasks = await getAllTasks()
   useStore.getState().setTasks(tasks)
   useStore.getState().setStorageReady(true)
 
   // 服务端历史模式下按需加载图片，避免首次进入时一次性拉取 VPS 上所有历史图片。
-  if (isServerStorageEnabled()) return
+  if (serverStorage) return
 
   // 收集所有任务引用的图片 id
   const referencedIds = new Set<string>()

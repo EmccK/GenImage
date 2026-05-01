@@ -1006,13 +1006,18 @@ async function serveStatic(req, res, url) {
   try {
     const s = await stat(file)
     const ext = extname(file).toLowerCase()
-    const cacheControl = file.includes(`${sep}assets${sep}`)
-      ? 'public, max-age=31536000, immutable'
-      : 'no-cache'
+    const isServiceWorker = file === join(DIST_DIR, 'sw.js')
+    let cacheControl = 'no-cache'
+    if (isServiceWorker) {
+      cacheControl = 'no-store, no-cache, max-age=0, must-revalidate'
+    } else if (file.includes(`${sep}assets${sep}`)) {
+      cacheControl = 'public, max-age=31536000, immutable'
+    }
     res.writeHead(200, {
       'Content-Type': MIME_TYPES[ext] || 'application/octet-stream',
       'Content-Length': s.size,
       'Cache-Control': cacheControl,
+      ...(isServiceWorker ? { 'Service-Worker-Allowed': '/' } : {}),
     })
     if (req.method === 'HEAD') return res.end()
     createReadStream(file).pipe(res)
