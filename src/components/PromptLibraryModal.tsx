@@ -69,12 +69,16 @@ export default function PromptLibraryModal({ presets, onSelect, onClose }: Props
                 </button>
               ))}
             </div>
-            <div className="max-h-[26vh] space-y-2 overflow-y-auto pr-1 custom-scrollbar md:max-h-[52vh]">
+            <div className="max-h-[26vh] space-y-2 overflow-y-auto px-0.5 py-0.5 custom-scrollbar md:max-h-[52vh]">
               {filtered.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => setActiveId(preset.id)}
-                  className={`w-full rounded-2xl px-3 py-2 text-left transition ${active?.id === preset.id ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20' : 'hover:bg-gray-50 dark:hover:bg-white/[0.04]'}`}
+                  className={`w-full rounded-2xl border px-3 py-2 text-left transition ${
+                    active?.id === preset.id
+                      ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)] dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300 dark:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)]'
+                      : 'border-transparent hover:bg-gray-50 dark:hover:bg-white/[0.04]'
+                  }`}
                 >
                   <div className="line-clamp-1 text-sm font-medium">{preset.title}</div>
                   <div className="mt-0.5 text-[11px] text-gray-400">{preset.category}</div>

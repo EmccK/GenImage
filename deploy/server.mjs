@@ -96,7 +96,7 @@ function hasTaskParamEnv() {
 }
 
 function isLockSettingsEnabled() {
-  return boolEnv('LOCK_APP_CONFIG', Boolean(env('APP_API_KEY') || env('APP_MODEL') || env('APP_API_MODE')))
+  return boolEnv('LOCK_APP_CONFIG', Boolean(env('APP_API_KEY') || env('APP_MODEL') || env('APP_API_MODE') || env('APP_CODEX_CLI')))
 }
 
 function isLockParamsEnabled() {

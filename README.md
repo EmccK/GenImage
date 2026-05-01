@@ -29,12 +29,13 @@ services:
 
       API_PROXY_URL: "https://api.openai.com/v1"
       APP_API_KEY: "sk-xxxx"
+      APP_API_MODE: "images"
+      APP_MODEL: "gpt-image-2"
+      APP_CODEX_CLI: "false"
       LOCK_APP_CONFIG: "true"
       HIDE_SETTINGS: "true"
 
       LOCK_TASK_PARAMS: "true"
-      APP_API_MODE: "images"
-      APP_MODEL: "gpt-image-2"
       APP_SIZE: "auto"
       APP_QUALITY: "auto"
       APP_OUTPUT_FORMAT: "png"
@@ -62,11 +63,12 @@ docker compose up -d
 | `DATA_DIR` | 数据目录，默认 `/data`；用户信息在 `users.json`，各用户历史在 `users/<用户名>/`。 |
 | `API_PROXY_URL` | 实际 OpenAI 兼容 API 地址，默认 `https://api.openai.com/v1`。 |
 | `APP_API_KEY` | 服务端持有的 API Key，不下发到浏览器；设置后默认启用同源代理。 |
+| `APP_API_MODE` | `images` 或 `responses`。 |
+| `APP_MODEL` | 模型名，如 `gpt-image-2`。 |
+| `APP_CODEX_CLI` | 是否开启 Codex CLI 兼容模式，设为 `true` 或 `false`。 |
 | `LOCK_APP_CONFIG` | 固定 API URL、Key、模型、接口模式等设置。 |
 | `HIDE_SETTINGS` | 隐藏右上角设置按钮。 |
 | `LOCK_TASK_PARAMS` | 固定生成参数。 |
-| `APP_API_MODE` | `images` 或 `responses`。 |
-| `APP_MODEL` | 模型名，如 `gpt-image-2`。 |
 | `APP_SIZE` | 尺寸，如 `auto`、`1024x1024`。 |
 | `APP_QUALITY` | `auto`、`low`、`medium`、`high`。 |
 | `APP_OUTPUT_FORMAT` | `png`、`jpeg`、`webp`。 |
