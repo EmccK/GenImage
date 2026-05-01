@@ -37,7 +37,6 @@ export default function LoginScreen({ usernameRequired, onLogin }: Props) {
             </svg>
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">私有图片工作台</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">登录后即可直接生成，历史记录会保存在 VPS。</p>
         </div>
 
         <div className="space-y-3">
