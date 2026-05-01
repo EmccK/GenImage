@@ -1,14 +1,29 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { getServerConfigSnapshot, logoutFromServer } from '../lib/serverClient'
+import { getServerConfigSnapshot } from '../lib/serverClient'
 import HelpModal from './HelpModal'
 import UserAdminModal from './UserAdminModal'
 
-export default function Header() {
+interface Props {
+  onLogout: () => void | Promise<void>
+}
+
+export default function Header({ onLogout }: Props) {
   const setShowSettings = useStore((s) => s.setShowSettings)
   const [showHelp, setShowHelp] = useState(false)
   const [showUserAdmin, setShowUserAdmin] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const serverConfig = getServerConfigSnapshot()
+
+  const handleLogout = async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await onLogout()
+    } finally {
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <header data-no-drag-select className="safe-area-top sticky top-0 z-40 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-white/[0.08]">
@@ -83,8 +98,9 @@ export default function Header() {
           )}
           {serverConfig.authEnabled && (
             <button
-              onClick={() => logoutFromServer().then(() => window.location.reload())}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:cursor-wait disabled:opacity-50 dark:hover:bg-gray-900 transition-colors"
               title="退出登录"
             >
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

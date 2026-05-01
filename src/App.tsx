@@ -3,7 +3,7 @@ import { initStore } from './store'
 import { useStore } from './store'
 import { normalizeBaseUrl } from './lib/api'
 import type { ApiMode } from './types'
-import { loadServerConfig, loginToServer, type ServerConfig } from './lib/serverClient'
+import { loadServerConfig, loginToServer, logoutFromServer, type ServerConfig } from './lib/serverClient'
 import Header from './components/Header'
 import SearchBar from './components/SearchBar'
 import TaskGrid from './components/TaskGrid'
@@ -111,6 +111,13 @@ export default function App() {
     await initStore()
   }
 
+  const handleLogout = async () => {
+    await logoutFromServer()
+    setServerConfig((prev) => prev
+      ? { ...prev, authenticated: false, currentUser: null, isAdmin: false }
+      : prev)
+  }
+
   if (!booted) {
     return (
       <main className="min-h-screen flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
@@ -125,7 +132,7 @@ export default function App() {
 
   return (
     <>
-      <Header />
+      <Header onLogout={handleLogout} />
       <main data-home-main data-drag-select-surface className="pb-48">
         <div className="safe-area-x max-w-7xl mx-auto">
           <SearchBar />

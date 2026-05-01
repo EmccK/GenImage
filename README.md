@@ -1,6 +1,6 @@
 # GenImage
 
-面向家庭私有部署的 OpenAI 图片生成工具。当前仅支持 Docker / VPS 部署：可设置访问密码，API 配置由服务端固定，生成历史和图片保存到 VPS 挂载目录。
+面向多人私有部署的 OpenAI 图片生成工具。当前仅支持 Docker / VPS 部署：可设置访问账号，API 配置由服务端固定，生成历史和图片保存到 VPS 挂载目录。
 
 ## 功能
 
@@ -51,7 +51,7 @@ services:
 docker compose up -d
 ```
 
-访问：`http://你的服务器IP:8080`。首次用 `APP_USERNAME` / `APP_PASSWORD` 登录管理员账号，然后点击右上角“用户管理”添加家人账号。每个用户的历史记录互相隔离，并保存在 `./genimage-data/users/<用户名>`。
+访问：`http://你的服务器IP:8080`。首次用 `APP_USERNAME` / `APP_PASSWORD` 登录管理员账号，然后点击右上角“用户管理”添加用户账号。每个用户的历史记录互相隔离，并保存在 `./genimage-data/users/<用户名>`。
 
 ## 常用环境变量
 

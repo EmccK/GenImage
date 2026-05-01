@@ -893,9 +893,14 @@ async function route(req, res) {
 
     return await serveStatic(req, res, url)
   } catch (error) {
-    console.error(error)
     const statusCode = error instanceof HttpError ? error.statusCode : 500
-    return json(res, statusCode, { message: error instanceof Error ? error.message : String(error) })
+    const message = error instanceof Error ? error.message : String(error)
+    if (statusCode >= 500) {
+      console.error(error)
+    } else {
+      console.warn(`${req.method} ${url.pathname} -> ${statusCode}: ${message}`)
+    }
+    return json(res, statusCode, { message })
   }
 }
 

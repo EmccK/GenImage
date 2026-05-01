@@ -171,7 +171,10 @@ export default function UserAdminModal({ onClose }: Props) {
                   <button
                     key={user.username}
                     onClick={() => selectUser(user)}
-                    className={`w-full rounded-2xl p-3 text-left transition ${selected === user.username ? 'bg-blue-50 ring-1 ring-blue-200 dark:bg-blue-500/10 dark:ring-blue-500/20' : 'hover:bg-gray-50 dark:hover:bg-white/[0.04]'}`}
+                    className={`w-full rounded-2xl border p-3 text-left transition ${selected === user.username
+                      ? 'border-blue-300 bg-blue-50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)] dark:border-blue-500/40 dark:bg-blue-500/10 dark:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)]'
+                      : 'border-transparent hover:border-gray-200/70 hover:bg-gray-50 dark:hover:border-white/[0.08] dark:hover:bg-white/[0.04]'
+                    }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
@@ -216,7 +219,7 @@ export default function UserAdminModal({ onClose }: Props) {
                   value={draft.username}
                   onChange={(e) => setDraft((prev) => ({ ...prev, username: e.target.value.toLowerCase() }))}
                   disabled={!isCreating}
-                  placeholder="如 mom / dad"
+                  placeholder="如 alice / bob"
                   className="w-full rounded-2xl border border-gray-200/70 bg-white/70 px-4 py-3 text-sm outline-none transition focus:border-blue-300 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100"
                 />
               </label>
@@ -225,7 +228,7 @@ export default function UserAdminModal({ onClose }: Props) {
                 <input
                   value={draft.displayName}
                   onChange={(e) => setDraft((prev) => ({ ...prev, displayName: e.target.value }))}
-                  placeholder="如 妈妈"
+                  placeholder="如 小明"
                   className="w-full rounded-2xl border border-gray-200/70 bg-white/70 px-4 py-3 text-sm outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100"
                 />
               </label>

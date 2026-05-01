@@ -215,8 +215,10 @@ export async function logoutFromServer(): Promise<void> {
       credentials: 'include',
       cache: 'no-store',
     })
+  } catch {
+    /* 即使请求失败，也先更新前端状态，避免退出按钮看起来没有反应。 */
   } finally {
-    currentConfig = { ...currentConfig, authenticated: false }
+    currentConfig = { ...currentConfig, authenticated: false, currentUser: null, isAdmin: false }
   }
 }
 
