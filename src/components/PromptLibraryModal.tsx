@@ -74,14 +74,25 @@ export default function PromptLibraryModal({ presets, onSelect, onClose }: Props
                 <button
                   key={preset.id}
                   onClick={() => setActiveId(preset.id)}
-                  className={`w-full rounded-2xl border px-3 py-2 text-left transition ${
+                  className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2 text-left transition ${
                     active?.id === preset.id
                       ? 'border-blue-300 bg-blue-50 text-blue-700 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)] dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300 dark:shadow-[inset_0_0_0_1px_rgba(59,130,246,0.22)]'
                       : 'border-transparent hover:bg-gray-50 dark:hover:bg-white/[0.04]'
                   }`}
                 >
-                  <div className="line-clamp-1 text-sm font-medium">{preset.title}</div>
-                  <div className="mt-0.5 text-[11px] text-gray-400">{preset.category}</div>
+                  {preset.imageUrl && (
+                    <img
+                      src={preset.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-11 w-11 shrink-0 rounded-xl border border-white/70 object-cover shadow-sm dark:border-white/[0.08]"
+                    />
+                  )}
+                  <div className="min-w-0">
+                    <div className="line-clamp-1 text-sm font-medium">{preset.title}</div>
+                    <div className="mt-0.5 text-[11px] text-gray-400">{preset.category}</div>
+                  </div>
                 </button>
               ))}
               {!filtered.length && <div className="py-10 text-center text-sm text-gray-400">没有匹配的模板</div>}
@@ -106,10 +117,21 @@ export default function PromptLibraryModal({ presets, onSelect, onClose }: Props
                     使用这个模板
                   </button>
                 </div>
+                {active.imageUrl && (
+                  <div className="mb-3 flex max-h-[18rem] min-h-[12rem] items-center justify-center overflow-hidden rounded-3xl border border-gray-200/70 bg-gray-50/70 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                    <img
+                      src={active.imageUrl}
+                      alt={active.title}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                )}
                 <textarea
                   readOnly
                   value={active.prompt}
-                  className="min-h-[18rem] flex-1 resize-none rounded-3xl border border-gray-200/70 bg-gray-50/70 p-4 text-sm leading-relaxed text-gray-700 outline-none custom-scrollbar dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200"
+                  className={`${active.imageUrl ? 'min-h-[10rem]' : 'min-h-[18rem]'} flex-1 resize-none rounded-3xl border border-gray-200/70 bg-gray-50/70 p-4 text-sm leading-relaxed text-gray-700 outline-none custom-scrollbar dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-200`}
                   data-selectable-text
                 />
                 {active.source && (

@@ -5,6 +5,7 @@ export interface PromptPreset {
   title: string
   category: string
   prompt: string
+  imageUrl?: string
   description?: string
   source?: string
   tags?: string[]
@@ -81,6 +82,7 @@ function normalizePromptPreset(value: unknown, index: number): PromptPreset | nu
     title,
     category,
     prompt,
+    imageUrl: typeof value.imageUrl === 'string' ? value.imageUrl : undefined,
     description: typeof value.description === 'string' ? value.description : undefined,
     source: typeof value.source === 'string' ? value.source : undefined,
     tags: Array.isArray(value.tags) ? value.tags.filter((tag): tag is string => typeof tag === 'string') : undefined,

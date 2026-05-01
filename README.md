@@ -33,6 +33,7 @@ services:
       APP_API_MODE: "images"
       APP_MODEL: "gpt-image-2"
       APP_CODEX_CLI: "false"
+      APP_TIMEOUT: "300"
       LOCK_APP_CONFIG: "true"
       HIDE_SETTINGS: "true"
 
@@ -68,6 +69,7 @@ docker compose up -d
 | `APP_API_MODE` | `images` 或 `responses`。 |
 | `APP_MODEL` | 模型名，如 `gpt-image-2`。 |
 | `APP_CODEX_CLI` | 是否开启 Codex CLI 兼容模式，设为 `true` 或 `false`。 |
+| `APP_TIMEOUT` | 请求超时时间，单位秒，默认 `300`。 |
 | `LOCK_APP_CONFIG` | 固定 API URL、Key、模型、接口模式等设置。 |
 | `HIDE_SETTINGS` | 隐藏右上角设置按钮。 |
 | `LOCK_TASK_PARAMS` | 固定生成参数。 |

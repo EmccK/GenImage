@@ -454,12 +454,14 @@ function normalizePromptPreset(value, index, source = DEFAULT_PROMPT_SOURCE) {
   if (!prompt) return null
   const title = String(value.title || `Prompt ${index + 1}`).trim()
   const category = String(value.category || '通用').trim()
+  const imageUrl = value.imageUrl || value.image || value.previewImage || value.thumbnail
   return {
     id: String(value.id || `${category}-${title}-${index}`).toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-'),
     title,
     category,
     description: value.description ? String(value.description) : undefined,
     source: value.source ? String(value.source) : source,
+    imageUrl: imageUrl ? String(imageUrl) : undefined,
     prompt,
     tags: Array.isArray(value.tags) ? value.tags.filter((item) => typeof item === 'string') : undefined,
   }
@@ -471,6 +473,27 @@ function stripMarkdownTitle(value) {
     .replace(/[#*_`]/g, '')
     .replace(/\s*\([^)]*\)\s*$/g, '')
     .trim()
+}
+
+function resolvePromptImageUrl(imageUrl, source) {
+  const clean = String(imageUrl || '').trim()
+  if (!clean || clean.startsWith('data:')) return clean
+  try {
+    return new URL(clean, source || DEFAULT_PROMPT_SOURCE).toString()
+  } catch {
+    return clean
+  }
+}
+
+function findMarkdownImageUrl(lines, start, end, source) {
+  for (let i = start; i < end; i++) {
+    const markdownImage = lines[i].match(/!\[[^\]]*]\(([^)\s]+)(?:\s+"[^"]*")?\)/)
+    if (markdownImage?.[1]) return resolvePromptImageUrl(markdownImage[1], source)
+
+    const htmlImage = lines[i].match(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i)
+    if (htmlImage?.[1]) return resolvePromptImageUrl(htmlImage[1], source)
+  }
+  return undefined
 }
 
 function parseMarkdownPrompts(markdown, source) {
@@ -485,18 +508,21 @@ function parseMarkdownPrompts(markdown, source) {
     if (!h3) continue
     const title = stripMarkdownTitle(h3[1]) || `Prompt ${presets.length + 1}`
     let prompt = ''
-    for (let j = i + 1; j < Math.min(lines.length, i + 80); j++) {
+    const blockEnd = lines.findIndex((line, idx) => idx > i && /^###\s+/.test(line))
+    const searchEnd = blockEnd < 0 ? Math.min(lines.length, i + 80) : Math.min(blockEnd, i + 80)
+    const imageUrl = findMarkdownImageUrl(lines, i + 1, searchEnd, source)
+    for (let j = i + 1; j < searchEnd; j++) {
       if (/^###\s+/.test(lines[j])) break
       if (/Prompt\s*:/i.test(lines[j])) {
-        const fenceStart = lines.findIndex((line, idx) => idx > j && /^```/.test(line))
+        const fenceStart = lines.findIndex((line, idx) => idx > j && idx < searchEnd && /^```/.test(line))
         if (fenceStart < 0) break
-        const fenceEnd = lines.findIndex((line, idx) => idx > fenceStart && /^```/.test(line))
+        const fenceEnd = lines.findIndex((line, idx) => idx > fenceStart && idx < searchEnd && /^```/.test(line))
         if (fenceEnd < 0) break
         prompt = lines.slice(fenceStart + 1, fenceEnd).join('\n').trim()
         break
       }
     }
-    if (prompt) presets.push(normalizePromptPreset({ title, category, prompt, source }, presets.length, source))
+    if (prompt) presets.push(normalizePromptPreset({ title, category, prompt, source, imageUrl }, presets.length, source))
   }
   return presets.filter(Boolean)
 }
@@ -805,17 +831,35 @@ async function handleProxy(req, res, url) {
   if (req.method === 'OPTIONS') return text(res, 204, '')
 
   const body = await readBody(req)
-  const headers = { ...req.headers }
-  delete headers.host
-  delete headers.connection
-  delete headers['content-length']
-  if (env('APP_API_KEY')) headers.authorization = `Bearer ${env('APP_API_KEY')}`
+  const apiKey = env('APP_API_KEY') || env('DEFAULT_API_KEY')
+  const headers = {
+    accept: req.headers.accept || 'application/json',
+    'cache-control': req.headers['cache-control'] || 'no-store, no-cache, max-age=0',
+    pragma: req.headers.pragma || 'no-cache',
+  }
+  if (apiKey) headers.authorization = `Bearer ${apiKey}`
+  if (req.headers['content-type']) headers['content-type'] = req.headers['content-type']
 
-  const upstream = await fetch(target, {
-    method: 'POST',
-    headers,
-    body,
-  })
+  const timeoutSeconds = Math.max(10, numberEnv('APP_TIMEOUT', 300))
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutSeconds * 1000)
+  let upstream
+  try {
+    upstream = await fetch(target, {
+      method: 'POST',
+      headers,
+      body,
+      signal: controller.signal,
+    })
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new HttpError(504, `上游 API 请求超时（${timeoutSeconds} 秒）`)
+    }
+    throw error
+  } finally {
+    clearTimeout(timeoutId)
+  }
+
   const upstreamBody = Buffer.from(await upstream.arrayBuffer())
   const responseHeaders = {}
   for (const [key, value] of upstream.headers.entries()) {
