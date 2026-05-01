@@ -1,0 +1,66 @@
+[
+  {
+    "id": "ghibli-photo-to-anime",
+    "title": "照片转动画电影感",
+    "category": "风格转换",
+    "description": "适合把人物或家庭照片改成温暖动画电影风。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "将参考图改造成温暖、手绘质感的动画电影剧照：保留人物身份、姿态、服装和主要构图，柔和自然光，干净背景，细腻笔触，温馨治愈氛围。可微调：把背景改成【你的场景】，整体色调偏【暖色/清新/夜景】。"
+  },
+  {
+    "id": "product-poster",
+    "title": "产品广告海报",
+    "category": "商业海报",
+    "description": "快速生成带主视觉、卖点和高级布光的产品图。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "为【产品名称】生成一张高端商业广告海报：产品位于画面中心，背景为【场景/材质】，加入精致布光、真实阴影、细节高光和少量装饰元素；整体风格【极简/奢华/科技/自然】，画面干净，可留出顶部或底部文字区域。"
+  },
+  {
+    "id": "social-avatar",
+    "title": "社交头像",
+    "category": "头像",
+    "description": "适合生成家庭成员、宠物或角色头像。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "根据参考图生成一张精致社交头像：保留主体身份特征，半身或肩部构图，背景简洁有层次，光线柔和，面部清晰自然，风格为【写实摄影/插画/3D/水彩】，适合用作微信或社交平台头像。"
+  },
+  {
+    "id": "sticker-pack",
+    "title": "表情包贴纸",
+    "category": "趣味创作",
+    "description": "把人物、宠物或角色做成可爱贴纸。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "把主体设计成一张可爱的透明背景贴纸：夸张但友好的表情，动作是【开心挥手/震惊/比心/加油】，边缘有白色描边，色彩明快，适合聊天表情包；保留主体最明显的身份特征。"
+  },
+  {
+    "id": "room-redesign",
+    "title": "房间改造预览",
+    "category": "家居",
+    "description": "基于参考图快速看装修或软装效果。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "基于参考图对房间进行改造预览：保持房间结构、门窗位置和视角不变，将风格改成【奶油风/日式原木/现代极简/轻法式】，替换家具和软装，光线自然，材质真实，画面整洁但保留生活感。"
+  },
+  {
+    "id": "travel-poster",
+    "title": "旅行明信片海报",
+    "category": "海报",
+    "description": "把地点或家庭旅行照片变成纪念海报。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "生成一张旅行明信片风格海报：主题地点是【城市/景点】，画面有标志性建筑或自然景观，色彩明亮复古，构图简洁，保留适当留白用于文字；氛围为【夏日/黄昏/清晨/节日】。"
+  },
+  {
+    "id": "old-photo-restore",
+    "title": "老照片修复上色",
+    "category": "照片修复",
+    "description": "用于修复模糊、褪色或黑白老照片。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "修复这张老照片：提升清晰度，减少划痕、噪点和褪色，保持人物五官和原始构图不变；如果是黑白照片，请自然上色，肤色、服饰和背景颜色真实可信，不要改变年代感。"
+  },
+  {
+    "id": "children-book",
+    "title": "儿童绘本插画",
+    "category": "插画",
+    "description": "生成亲子、宠物或故事场景。",
+    "source": "https://github.com/EvoLinkAI/awesome-gpt-image-2-prompts",
+    "prompt": "创作一张儿童绘本插画：主角是【人物/动物】，正在【动作/故事情节】，场景为【森林/厨房/海边/卧室】，线条柔和，颜色温暖，细节可爱但不杂乱，适合睡前故事书页面。"
+  }
+]

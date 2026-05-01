@@ -26,6 +26,7 @@ import { callImageApi } from './lib/api'
 import { validateMaskMatchesImage } from './lib/canvasImage'
 import { orderInputImagesForMask } from './lib/mask'
 import { normalizeImageSize } from './lib/size'
+import { applyLockedParams, applyLockedSettings, isServerStorageEnabled } from './lib/serverClient'
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate'
 
 // ===== Image cache =====
@@ -138,11 +139,11 @@ export const useStore = create<AppState>()(
       // Settings
       settings: { ...DEFAULT_SETTINGS },
       setSettings: (s) => set((st) => ({
-        settings: {
+        settings: applyLockedSettings({
           ...st.settings,
           ...s,
           apiMode: s.apiMode ?? st.settings.apiMode,
-        },
+        }),
       })),
       dismissedCodexCliPrompts: [],
       dismissCodexCliPrompt: (key) => set((st) => ({
@@ -210,7 +211,7 @@ export const useStore = create<AppState>()(
 
       // Params
       params: { ...DEFAULT_PARAMS },
-      setParams: (p) => set((s) => ({ params: { ...s.params, ...p } })),
+      setParams: (p) => set((s) => ({ params: applyLockedParams({ ...s.params, ...p }) })),
 
       // Tasks
       tasks: [],
@@ -265,7 +266,7 @@ export const useStore = create<AppState>()(
       setConfirmDialog: (confirmDialog) => set({ confirmDialog }),
     }),
     {
-      name: 'gpt-image-playground',
+      name: 'genimage',
       partialize: (state) => ({
         settings: state.settings,
         params: state.params,
@@ -317,6 +318,9 @@ function normalizeParamsForSettings(params: TaskParams, settings: AppSettings): 
 export async function initStore() {
   const tasks = await getAllTasks()
   useStore.getState().setTasks(tasks)
+
+  // 服务端历史模式下按需加载图片，避免首次进入时一次性拉取 VPS 上所有历史图片。
+  if (isServerStorageEnabled()) return
 
   // 收集所有任务引用的图片 id
   const referencedIds = new Set<string>()
@@ -755,7 +759,7 @@ export async function exportData() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `gpt-image-playground-${Date.now()}.zip`
+    a.download = `genimage-${Date.now()}.zip`
     a.click()
     URL.revokeObjectURL(url)
     useStore.getState().showToast('数据已导出', 'success')

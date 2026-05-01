@@ -4,9 +4,11 @@ import { useStore, submitTask, addImageFromFile, updateTaskInStore, removeMultip
 import { DEFAULT_PARAMS } from '../types'
 import { normalizeImageSize } from '../lib/size'
 import { createMaskPreviewDataUrl } from '../lib/canvasImage'
+import { getServerConfigSnapshot } from '../lib/serverClient'
 import Select from './Select'
 import SizePickerModal from './SizePickerModal'
 import ViewportTooltip from './ViewportTooltip'
+import PromptLibraryModal from './PromptLibraryModal'
 
 /** 通用悬浮气泡提示 */
 function ButtonTooltip({ visible, text }: { visible: boolean; text: string }) {
@@ -50,6 +52,9 @@ export default function InputBar() {
   const filterStatus = useStore((s) => s.filterStatus)
   const filterFavorite = useStore((s) => s.filterFavorite)
   const searchQuery = useStore((s) => s.searchQuery)
+  const serverConfig = getServerConfigSnapshot()
+  const promptPresets = serverConfig.promptPresets
+  const paramsLocked = serverConfig.lockParams
 
   const filteredTasks = useMemo(() => {
     const sorted = [...tasks].sort((a, b) => b.createdAt - a.createdAt)
@@ -123,6 +128,7 @@ export default function InputBar() {
   const [imageHintId, setImageHintId] = useState<string | null>(null)
   const [mobileCollapsed, setMobileCollapsed] = useState(false)
   const [showSizePicker, setShowSizePicker] = useState(false)
+  const [showPromptLibrary, setShowPromptLibrary] = useState(false)
   const [maskPreviewUrl, setMaskPreviewUrl] = useState('')
   const [imageDragIndex, setImageDragIndex] = useState<number | null>(null)
   const [imageDragOverIndex, setImageDragOverIndex] = useState<number | null>(null)
@@ -955,6 +961,15 @@ export default function InputBar() {
     </div>
   )
 
+  const renderLockedParams = () => (
+    <div className="flex-1 rounded-2xl border border-blue-200/70 bg-blue-50/60 px-3 py-2 text-xs text-blue-700 shadow-sm dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+      <div className="font-medium">参数已由部署端固定</div>
+      <div className="mt-1 font-mono text-[11px] opacity-80">
+        {normalizeImageSize(params.size) || DEFAULT_PARAMS.size} · {params.quality} · {params.output_format.toUpperCase()} · {params.n} 张
+      </div>
+    </div>
+  )
+
   return (
     <>
       {/* 全屏拖拽遮罩 */}
@@ -996,6 +1011,14 @@ export default function InputBar() {
           currentSize={params.size}
           onSelect={(size) => setParams({ size })}
           onClose={() => setShowSizePicker(false)}
+        />
+      )}
+
+      {showPromptLibrary && (
+        <PromptLibraryModal
+          presets={promptPresets}
+          onSelect={(nextPrompt) => setPrompt(nextPrompt)}
+          onClose={() => setShowPromptLibrary(false)}
         />
       )}
 
@@ -1103,9 +1126,21 @@ export default function InputBar() {
           <div className="mt-3">
             {/* 桌面端布局 */}
             <div className="hidden sm:flex items-end justify-between gap-3">
-              {renderParams('grid-cols-6')}
+              {paramsLocked ? renderLockedParams() : renderParams('grid-cols-6')}
 
               <div className="flex gap-2 flex-shrink-0 mb-0.5">
+                {promptPresets.length > 0 && (
+                  <button
+                    onClick={() => setShowPromptLibrary(true)}
+                    className="p-2.5 rounded-xl bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25 transition-all shadow-sm"
+                    title="打开 Prompt 模板"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7L12 3z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+                    </svg>
+                  </button>
+                )}
                 <div
                   className="relative"
                   onMouseEnter={() => setAttachHover(true)}
@@ -1154,12 +1189,24 @@ export default function InputBar() {
             <div className="sm:hidden flex flex-col gap-2">
               <div className={`collapse-section${mobileCollapsed ? ' collapsed' : ''}`}>
                 <div className="collapse-inner">
-                  {renderParams('grid-cols-2')}
+                  {paramsLocked ? renderLockedParams() : renderParams('grid-cols-2')}
                   <div className="h-2" />
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                {promptPresets.length > 0 && (
+                  <button
+                    onClick={() => setShowPromptLibrary(true)}
+                    className="p-2.5 rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 transition-all shadow-sm flex-shrink-0"
+                    title="打开 Prompt 模板"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l1.7 4.8L18.5 9.5l-4.8 1.7L12 16l-1.7-4.8L5.5 9.5l4.8-1.7L12 3z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z" />
+                    </svg>
+                  </button>
+                )}
                 <div
                   className="relative"
                   onMouseEnter={() => setAttachHover(true)}

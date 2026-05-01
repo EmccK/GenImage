@@ -1,6 +1,7 @@
 import type { TaskRecord, StoredImage } from '../types'
+import { isServerStorageEnabled, serverDb } from './serverClient'
 
-const DB_NAME = 'gpt-image-playground'
+const DB_NAME = 'genimage'
 const DB_VERSION = 1
 const STORE_TASKS = 'tasks'
 const STORE_IMAGES = 'images'
@@ -42,40 +43,49 @@ function dbTransaction<T>(
 // ===== Tasks =====
 
 export function getAllTasks(): Promise<TaskRecord[]> {
+  if (isServerStorageEnabled()) return serverDb.getAllTasks()
   return dbTransaction(STORE_TASKS, 'readonly', (s) => s.getAll())
 }
 
 export function putTask(task: TaskRecord): Promise<IDBValidKey> {
+  if (isServerStorageEnabled()) return serverDb.putTask(task)
   return dbTransaction(STORE_TASKS, 'readwrite', (s) => s.put(task))
 }
 
 export function deleteTask(id: string): Promise<undefined> {
+  if (isServerStorageEnabled()) return serverDb.deleteTask(id)
   return dbTransaction(STORE_TASKS, 'readwrite', (s) => s.delete(id))
 }
 
 export function clearTasks(): Promise<undefined> {
+  if (isServerStorageEnabled()) return serverDb.clearTasks()
   return dbTransaction(STORE_TASKS, 'readwrite', (s) => s.clear())
 }
 
 // ===== Images =====
 
 export function getImage(id: string): Promise<StoredImage | undefined> {
+  if (isServerStorageEnabled()) return serverDb.getImage(id)
   return dbTransaction(STORE_IMAGES, 'readonly', (s) => s.get(id))
 }
 
 export function getAllImages(): Promise<StoredImage[]> {
+  if (isServerStorageEnabled()) return serverDb.getAllImages()
   return dbTransaction(STORE_IMAGES, 'readonly', (s) => s.getAll())
 }
 
 export function putImage(image: StoredImage): Promise<IDBValidKey> {
+  if (isServerStorageEnabled()) return serverDb.putImage(image)
   return dbTransaction(STORE_IMAGES, 'readwrite', (s) => s.put(image))
 }
 
 export function deleteImage(id: string): Promise<undefined> {
+  if (isServerStorageEnabled()) return serverDb.deleteImage(id)
   return dbTransaction(STORE_IMAGES, 'readwrite', (s) => s.delete(id))
 }
 
 export function clearImages(): Promise<undefined> {
+  if (isServerStorageEnabled()) return serverDb.clearImages()
   return dbTransaction(STORE_IMAGES, 'readwrite', (s) => s.clear())
 }
 

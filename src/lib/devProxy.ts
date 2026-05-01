@@ -1,4 +1,5 @@
 import { readRuntimeEnv } from './runtimeEnv'
+import { getServerConfigSnapshot } from './serverClient'
 
 export interface DevProxyConfig {
   enabled: boolean
@@ -86,5 +87,7 @@ export function readClientDevProxyConfig(): DevProxyConfig | null {
 }
 
 export function isApiProxyAvailable(proxyConfig: DevProxyConfig | null = readClientDevProxyConfig()): boolean {
-  return readRuntimeEnv(import.meta.env.VITE_API_PROXY_AVAILABLE) === 'true' || Boolean(proxyConfig?.enabled)
+  return readRuntimeEnv(import.meta.env.VITE_API_PROXY_AVAILABLE) === 'true' ||
+    Boolean(proxyConfig?.enabled) ||
+    Boolean(getServerConfigSnapshot().apiProxyAvailable)
 }

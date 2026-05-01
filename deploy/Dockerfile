@@ -3,8 +3,8 @@ FROM --platform=$BUILDPLATFORM node:20-alpine AS build
 
 WORKDIR /app
 
-ENV VITE_DEFAULT_API_URL=__VITE_DEFAULT_API_URL_PLACEHOLDER__
-ENV VITE_API_PROXY_AVAILABLE=__VITE_API_PROXY_AVAILABLE_PLACEHOLDER__
+ENV VITE_DEFAULT_API_URL=https://api.openai.com/v1
+ENV VITE_API_PROXY_AVAILABLE=false
 
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -13,18 +13,22 @@ COPY . .
 RUN npm run build
 
 # ---- Production stage ----
-FROM nginx:alpine
+FROM node:20-alpine
+
+WORKDIR /app
 
 ENV HOST=0.0.0.0
 ENV PORT=80
+ENV DATA_DIR=/data
 ENV DEFAULT_API_URL=
 ENV API_PROXY_URL=
 ENV ENABLE_API_PROXY=false
+ENV SERVER_STORAGE=false
 
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY deploy/nginx.conf /etc/nginx/templates/default.conf.template
-COPY --chmod=755 deploy/inject-api-url.sh /docker-entrypoint.d/40-inject-api-url.sh
+COPY --from=build /app/dist ./dist
+COPY deploy/server.mjs ./deploy/server.mjs
 
+VOLUME ["/data"]
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "deploy/server.mjs"]
