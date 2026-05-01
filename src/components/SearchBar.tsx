@@ -1,5 +1,19 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store'
+import { adminApi, getServerConfigSnapshot, type AdminUser } from '../lib/serverClient'
+import type { OwnerFilter } from '../types'
 import Select from './Select'
+
+interface OwnerOption {
+  username: string
+  displayName: string
+}
+
+function userLabel(user: OwnerOption) {
+  return user.displayName && user.displayName !== user.username
+    ? `${user.displayName} · @${user.username}`
+    : `@${user.username}`
+}
 
 export default function SearchBar() {
   const searchQuery = useStore((s) => s.searchQuery)
@@ -8,10 +22,63 @@ export default function SearchBar() {
   const setFilterStatus = useStore((s) => s.setFilterStatus)
   const filterFavorite = useStore((s) => s.filterFavorite)
   const setFilterFavorite = useStore((s) => s.setFilterFavorite)
+  const filterOwner = useStore((s) => s.filterOwner)
+  const setFilterOwner = useStore((s) => s.setFilterOwner)
+  const tasks = useStore((s) => s.tasks)
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const serverConfig = getServerConfigSnapshot()
+  const isAdmin = serverConfig.isAdmin
+  const currentUser = serverConfig.currentUser
+  const currentUsername = currentUser?.username ?? ''
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setUsers([])
+      return
+    }
+
+    let cancelled = false
+    adminApi.listUsers()
+      .then((nextUsers) => {
+        if (!cancelled) setUsers(nextUsers)
+      })
+      .catch(() => {
+        if (!cancelled) setUsers([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
+
+  const ownerOptions = useMemo(() => {
+    const byUsername = new Map<string, OwnerOption>()
+    const addOwner = (username?: string, displayName?: string) => {
+      if (!username) return
+      byUsername.set(username, {
+        username,
+        displayName: displayName || username,
+      })
+    }
+
+    addOwner(currentUsername, currentUser?.displayName)
+    users.forEach((user) => addOwner(user.username, user.displayName))
+    tasks.forEach((task) => addOwner(task.ownerUsername, task.ownerDisplayName))
+
+    return Array.from(byUsername.values())
+      .filter((user) => user.username !== currentUsername)
+      .sort((a, b) => userLabel(a).localeCompare(userLabel(b), 'zh-Hans-CN'))
+  }, [currentUser?.displayName, currentUsername, tasks, users])
+
+  const ownerFilterOptions = useMemo(() => [
+    { label: '全部用户', value: 'all' },
+    ...ownerOptions.map((user) => ({ label: userLabel(user), value: `user:${user.username}` })),
+    ...(currentUsername ? [{ label: '自己', value: 'self' }] : []),
+  ], [currentUsername, ownerOptions])
 
   return (
-    <div data-no-drag-select className="mt-6 mb-4 flex gap-3">
-      <div className="flex gap-2 flex-shrink-0 z-20">
+    <div data-no-drag-select className="mt-6 mb-4 flex flex-col gap-3 md:flex-row">
+      <div className="flex flex-wrap gap-2 flex-shrink-0 z-20">
         <button
           onClick={() => setFilterFavorite(!filterFavorite)}
           className={`p-2.5 rounded-xl border transition-all ${
@@ -28,7 +95,7 @@ export default function SearchBar() {
         <div className="relative w-28">
           <Select
             value={filterStatus}
-            onChange={(val) => setFilterStatus(val as any)}
+            onChange={(val) => setFilterStatus(val as typeof filterStatus)}
             options={[
               { label: '全部状态', value: 'all' },
               { label: '已完成', value: 'done' },
@@ -38,8 +105,18 @@ export default function SearchBar() {
             className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-white/[0.06] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
           />
         </div>
+        {isAdmin && (
+          <div className="relative w-40">
+            <Select
+              value={filterOwner}
+              onChange={(val) => setFilterOwner(val as OwnerFilter)}
+              options={ownerFilterOptions}
+              className="px-3 py-2.5 rounded-xl border border-gray-200 dark:border-white/[0.08] bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-white/[0.06] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
+            />
+          </div>
+        )}
       </div>
-      <div className="relative flex-1 z-10">
+      <div className="relative min-w-[12rem] flex-1 z-10">
         <svg
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500"
           fill="none"

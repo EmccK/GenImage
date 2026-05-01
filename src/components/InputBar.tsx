@@ -5,6 +5,7 @@ import { DEFAULT_PARAMS } from '../types'
 import { normalizeImageSize } from '../lib/size'
 import { createMaskPreviewDataUrl } from '../lib/canvasImage'
 import { getServerConfigSnapshot } from '../lib/serverClient'
+import { filterTasks } from '../lib/taskFilters'
 import Select from './Select'
 import SizePickerModal from './SizePickerModal'
 import ViewportTooltip from './ViewportTooltip'
@@ -51,26 +52,22 @@ export default function InputBar() {
   const tasks = useStore((s) => s.tasks)
   const filterStatus = useStore((s) => s.filterStatus)
   const filterFavorite = useStore((s) => s.filterFavorite)
+  const filterOwner = useStore((s) => s.filterOwner)
   const searchQuery = useStore((s) => s.searchQuery)
   const serverConfig = getServerConfigSnapshot()
   const promptPresets = serverConfig.promptPresets
   const paramsLocked = serverConfig.lockParams
+  const isAdmin = serverConfig.isAdmin
+  const currentUsername = serverConfig.currentUser?.username
 
-  const filteredTasks = useMemo(() => {
-    const sorted = [...tasks].sort((a, b) => b.createdAt - a.createdAt)
-    const q = searchQuery.trim().toLowerCase()
-    
-    return sorted.filter((t) => {
-      if (filterFavorite && !t.isFavorite) return false
-      const matchStatus = filterStatus === 'all' || t.status === filterStatus
-      if (!matchStatus) return false
-      
-      if (!q) return true
-      const prompt = (t.prompt || '').toLowerCase()
-      const paramStr = JSON.stringify(t.params).toLowerCase()
-      return prompt.includes(q) || paramStr.includes(q)
-    })
-  }, [tasks, searchQuery, filterStatus, filterFavorite])
+  const filteredTasks = useMemo(() => filterTasks(tasks, {
+    searchQuery,
+    filterStatus,
+    filterFavorite,
+    filterOwner,
+    isAdmin,
+    currentUsername,
+  }), [tasks, searchQuery, filterStatus, filterFavorite, filterOwner, isAdmin, currentUsername])
 
   const handleSelectAllToggle = useCallback(() => {
     if (selectedTaskIds.length === filteredTasks.length && filteredTasks.length > 0) {

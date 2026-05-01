@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useStore, reuseConfig, editOutputs, removeTask } from '../store'
+import { getServerConfigSnapshot } from '../lib/serverClient'
+import { filterTasks } from '../lib/taskFilters'
 import TaskCard from './TaskCard'
 
 export default function TaskGrid() {
@@ -8,6 +10,7 @@ export default function TaskGrid() {
   const searchQuery = useStore((s) => s.searchQuery)
   const filterStatus = useStore((s) => s.filterStatus)
   const filterFavorite = useStore((s) => s.filterFavorite)
+  const filterOwner = useStore((s) => s.filterOwner)
   const setDetailTaskId = useStore((s) => s.setDetailTaskId)
   const setConfirmDialog = useStore((s) => s.setConfirmDialog)
   const selectedTaskIds = useStore((s) => s.selectedTaskIds)
@@ -25,22 +28,21 @@ export default function TaskGrid() {
   const initialSelection = useRef<string[]>([])
   const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform)
 
-  const filteredTasks = useMemo(() => {
-    const sorted = [...tasks].sort((a, b) => b.createdAt - a.createdAt)
-    const q = searchQuery.trim().toLowerCase()
-    
-    return sorted.filter((t) => {
-      if (filterFavorite && !t.isFavorite) return false
-      const matchStatus = filterStatus === 'all' || t.status === filterStatus
-      if (!matchStatus) return false
-      
-      if (!q) return true
-      const prompt = (t.prompt || '').toLowerCase()
-      const paramStr = JSON.stringify(t.params).toLowerCase()
-      const owner = `${t.ownerDisplayName || ''} ${t.ownerUsername || ''}`.toLowerCase()
-      return prompt.includes(q) || paramStr.includes(q) || owner.includes(q)
-    })
-  }, [tasks, searchQuery, filterStatus, filterFavorite])
+  const serverConfig = getServerConfigSnapshot()
+  const isAdmin = serverConfig.isAdmin
+  const currentUsername = serverConfig.currentUser?.username
+  const hasActiveFilter = Boolean(
+    searchQuery.trim() || filterFavorite || filterStatus !== 'all' || (isAdmin && filterOwner !== 'all'),
+  )
+
+  const filteredTasks = useMemo(() => filterTasks(tasks, {
+    searchQuery,
+    filterStatus,
+    filterFavorite,
+    filterOwner,
+    isAdmin,
+    currentUsername,
+  }), [tasks, searchQuery, filterStatus, filterFavorite, filterOwner, isAdmin, currentUsername])
 
   const handleDelete = (task: typeof tasks[0]) => {
     setConfirmDialog({
@@ -178,7 +180,7 @@ export default function TaskGrid() {
   if (!filteredTasks.length) {
     return (
       <div className="text-center py-20 text-gray-400 dark:text-gray-500">
-        {searchQuery || filterFavorite ? (
+        {hasActiveFilter ? (
           <p className="text-sm">没有找到匹配的记录</p>
         ) : (
           <>

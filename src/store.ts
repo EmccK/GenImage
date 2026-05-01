@@ -7,6 +7,7 @@ import type {
   MaskDraft,
   TaskRecord,
   ExportData,
+  OwnerFilter,
 } from './types'
 import { DEFAULT_SETTINGS, DEFAULT_PARAMS } from './types'
 import {
@@ -101,6 +102,8 @@ interface AppState {
   setFilterStatus: (status: AppState['filterStatus']) => void
   filterFavorite: boolean
   setFilterFavorite: (f: boolean) => void
+  filterOwner: OwnerFilter
+  setFilterOwner: (owner: OwnerFilter) => void
 
   // 多选
   selectedTaskIds: string[]
@@ -232,6 +235,8 @@ export const useStore = create<AppState>()(
       setFilterStatus: (filterStatus) => set({ filterStatus }),
       filterFavorite: false,
       setFilterFavorite: (filterFavorite) => set({ filterFavorite }),
+      filterOwner: 'self',
+      setFilterOwner: (filterOwner) => set({ filterOwner }),
 
       // Selection
       selectedTaskIds: [],
