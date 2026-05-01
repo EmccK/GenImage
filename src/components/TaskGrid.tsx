@@ -4,6 +4,7 @@ import TaskCard from './TaskCard'
 
 export default function TaskGrid() {
   const tasks = useStore((s) => s.tasks)
+  const storageReady = useStore((s) => s.storageReady)
   const searchQuery = useStore((s) => s.searchQuery)
   const filterStatus = useStore((s) => s.filterStatus)
   const filterFavorite = useStore((s) => s.filterFavorite)
@@ -36,7 +37,8 @@ export default function TaskGrid() {
       if (!q) return true
       const prompt = (t.prompt || '').toLowerCase()
       const paramStr = JSON.stringify(t.params).toLowerCase()
-      return prompt.includes(q) || paramStr.includes(q)
+      const owner = `${t.ownerDisplayName || ''} ${t.ownerUsername || ''}`.toLowerCase()
+      return prompt.includes(q) || paramStr.includes(q) || owner.includes(q)
     })
   }, [tasks, searchQuery, filterStatus, filterFavorite])
 
@@ -164,6 +166,14 @@ export default function TaskGrid() {
       document.removeEventListener('mouseup', handleDocumentMouseUp, true)
     }
   }, [clearSelection, isMac])
+
+  if (!storageReady) {
+    return (
+      <div className="py-20 text-center text-sm text-gray-400 dark:text-gray-500">
+        正在加载历史记录...
+      </div>
+    )
+  }
 
   if (!filteredTasks.length) {
     return (

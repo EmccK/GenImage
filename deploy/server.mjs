@@ -261,6 +261,23 @@ function normalizeRole(role) {
   return role === 'admin' ? 'admin' : 'user'
 }
 
+function normalizeGenerationLimit(value) {
+  if (value == null || value === '') return null
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0) throw new HttpError(400, '生成次数必须为空或非负整数')
+  return Math.floor(n)
+}
+
+function generationLimitOf(user) {
+  const n = Number(user?.generationLimit)
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : null
+}
+
+function generationUsedOf(user) {
+  const n = Number(user?.generationUsed)
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0
+}
+
 function userDataDir(username) {
   return join(USERS_DIR, username)
 }
@@ -287,6 +304,8 @@ function publicUser(user, extra = {}) {
     displayName: user.displayName || user.username,
     role: user.role === 'admin' ? 'admin' : 'user',
     disabled: Boolean(user.disabled),
+    generationLimit: generationLimitOf(user),
+    generationUsed: generationUsedOf(user),
     createdAt: user.createdAt || 0,
     updatedAt: user.updatedAt || user.createdAt || 0,
     ...extra,
@@ -650,6 +669,8 @@ async function handleAdminUsers(req, res, url, authUser) {
         displayName: String(body.displayName || username).trim() || username,
         role: normalizeRole(body.role),
         disabled: Boolean(body.disabled),
+        generationLimit: normalizeGenerationLimit(body.generationLimit),
+        generationUsed: 0,
         passwordHash: hashPassword(password),
         createdAt: now,
         updatedAt: now,
@@ -676,6 +697,8 @@ async function handleAdminUsers(req, res, url, authUser) {
       if (typeof body.displayName === 'string') next.displayName = body.displayName.trim() || username
       if (typeof body.role === 'string') next.role = normalizeRole(body.role)
       if (typeof body.disabled === 'boolean') next.disabled = body.disabled
+      if ('generationLimit' in body) next.generationLimit = normalizeGenerationLimit(body.generationLimit)
+      if ('generationUsed' in body) next.generationUsed = generationUsedOf({ generationUsed: body.generationUsed })
       if (typeof body.password === 'string' && body.password.trim()) {
         if (body.password.length < 4) throw new HttpError(400, '密码至少需要 4 位')
         next.passwordHash = hashPassword(body.password)
@@ -715,12 +738,56 @@ function storageUsername(authUser) {
   return authUser?.username || 'default'
 }
 
+function publicTask(task, user) {
+  return {
+    ...task,
+    ownerUsername: user.username,
+    ownerDisplayName: user.displayName || user.username,
+  }
+}
+
+async function listAdminTasks(authUser) {
+  requireAdmin(authUser)
+  const users = await readUsers()
+  const tasks = []
+  for (const user of users) {
+    if (!isValidUsername(user.username)) continue
+    await ensureUserDataDir(user.username)
+    const list = await readJsonFile(userTasksFile(user.username), [])
+    if (!Array.isArray(list)) continue
+    for (const task of list) {
+      if (task && typeof task === 'object') tasks.push(publicTask(task, user))
+    }
+  }
+  return tasks
+}
+
+function resolveTaskOwner(url, authUser) {
+  const requested = normalizeUsername(url.searchParams.get('owner') || '')
+  if (requested && authUser?.role === 'admin') {
+    assertValidUsername(requested)
+    return requested
+  }
+  return storageUsername(authUser)
+}
+
+function stripTaskOwnerFields(task) {
+  if (task && typeof task === 'object') {
+    delete task.ownerUsername
+    delete task.ownerDisplayName
+  }
+  return task
+}
+
 async function handleTasks(req, res, url, authUser) {
   if (!boolEnv('SERVER_STORAGE')) return text(res, 404, 'Server storage is disabled')
-  const username = storageUsername(authUser)
+  const username = resolveTaskOwner(url, authUser)
   await ensureUserDataDir(username)
 
   if (req.method === 'GET' && url.pathname === '/app-api/tasks') {
+    if (authUser?.role === 'admin' && url.searchParams.get('scope') !== 'self') {
+      return json(res, 200, await listAdminTasks(authUser))
+    }
     return json(res, 200, await readJsonFile(userTasksFile(username), []))
   }
   if (req.method === 'POST' && url.pathname === '/app-api/tasks/clear') {
@@ -734,7 +801,7 @@ async function handleTasks(req, res, url, authUser) {
   if (!id) return text(res, 400, 'Invalid task id')
 
   if (req.method === 'PUT') {
-    const task = await readJsonBody(req)
+    const task = stripTaskOwnerFields(await readJsonBody(req))
     task.id = id
     await mutateTasks(username, (tasks) => {
       const idx = tasks.findIndex((item) => item?.id === id)
@@ -790,7 +857,15 @@ async function handleImages(req, res, url, authUser) {
   const file = join(userImagesDir(username), `${id}.json`)
 
   if (req.method === 'GET') {
-    const image = await readJsonFile(file, null)
+    let image = await readJsonFile(file, null)
+    if (!image && authUser?.role === 'admin') {
+      const users = await readUsers()
+      for (const user of users) {
+        if (!isValidUsername(user.username) || user.username === username) continue
+        image = await readJsonFile(join(userImagesDir(user.username), `${id}.json`), null)
+        if (image) break
+      }
+    }
     return json(res, image ? 200 : 404, image || { message: '图片不存在' })
   }
   if (req.method === 'PUT') {
@@ -804,6 +879,42 @@ async function handleImages(req, res, url, authUser) {
     return json(res, 200, { ok: true })
   }
   return false
+}
+
+async function reserveGeneration(authUser) {
+  if (!authUser?.username) return async () => {}
+  const username = authUser.username
+  await mutateUsers((users) => {
+    const idx = users.findIndex((user) => user.username === username)
+    if (idx < 0) throw new HttpError(401, '请先登录')
+    const user = users[idx]
+    const used = generationUsedOf(user)
+    const limit = generationLimitOf(user)
+    if (limit != null && used >= limit) {
+      throw new HttpError(429, '生成次数已用完，请联系管理员增加次数')
+    }
+    users[idx] = {
+      ...user,
+      generationUsed: used + 1,
+      updatedAt: Date.now(),
+    }
+  })
+
+  let refunded = false
+  return async () => {
+    if (refunded) return
+    refunded = true
+    await mutateUsers((users) => {
+      const idx = users.findIndex((user) => user.username === username)
+      if (idx < 0) return
+      const used = generationUsedOf(users[idx])
+      users[idx] = {
+        ...users[idx],
+        generationUsed: Math.max(0, used - 1),
+        updatedAt: Date.now(),
+      }
+    }).catch(() => {})
+  }
 }
 
 async function handlePromptEndpoint(_req, res) {
@@ -823,7 +934,7 @@ function proxyTargetUrl(url) {
   return targetUrl.toString()
 }
 
-async function handleProxy(req, res, url) {
+async function handleProxy(req, res, url, authUser) {
   if (!isProxyEnabled()) return text(res, 404, 'API proxy is disabled')
   if (!['POST', 'OPTIONS'].includes(req.method)) return text(res, 405, 'Method Not Allowed')
   const target = proxyTargetUrl(url)
@@ -831,6 +942,7 @@ async function handleProxy(req, res, url) {
   if (req.method === 'OPTIONS') return text(res, 204, '')
 
   const body = await readBody(req)
+  const refundGeneration = await reserveGeneration(authUser)
   const apiKey = env('APP_API_KEY') || env('DEFAULT_API_KEY')
   const headers = {
     accept: req.headers.accept || 'application/json',
@@ -852,6 +964,7 @@ async function handleProxy(req, res, url) {
       signal: controller.signal,
     })
   } catch (error) {
+    await refundGeneration()
     if (error?.name === 'AbortError') {
       throw new HttpError(504, `上游 API 请求超时（${timeoutSeconds} 秒）`)
     }
@@ -859,6 +972,7 @@ async function handleProxy(req, res, url) {
   } finally {
     clearTimeout(timeoutId)
   }
+  if (!upstream.ok) await refundGeneration()
 
   const upstreamBody = Buffer.from(await upstream.arrayBuffer())
   const responseHeaders = {}
@@ -933,7 +1047,7 @@ async function route(req, res) {
       const handled = await handleImages(req, res, url, authUser)
       if (handled !== false) return
     }
-    if (url.pathname.startsWith('/api-proxy/')) return await handleProxy(req, res, url)
+    if (url.pathname.startsWith('/api-proxy/')) return await handleProxy(req, res, url, authUser)
 
     return await serveStatic(req, res, url)
   } catch (error) {

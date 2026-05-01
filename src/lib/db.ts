@@ -52,8 +52,9 @@ export function putTask(task: TaskRecord): Promise<IDBValidKey> {
   return dbTransaction(STORE_TASKS, 'readwrite', (s) => s.put(task))
 }
 
-export function deleteTask(id: string): Promise<undefined> {
-  if (isServerStorageEnabled()) return serverDb.deleteTask(id)
+export function deleteTask(taskOrId: string | TaskRecord): Promise<undefined> {
+  if (isServerStorageEnabled()) return serverDb.deleteTask(taskOrId)
+  const id = typeof taskOrId === 'string' ? taskOrId : taskOrId.id
   return dbTransaction(STORE_TASKS, 'readwrite', (s) => s.delete(id))
 }
 

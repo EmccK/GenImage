@@ -13,6 +13,7 @@ type Draft = {
   password: string
   role: AdminUser['role']
   disabled: boolean
+  generationLimit: string
 }
 
 const emptyDraft: Draft = {
@@ -21,11 +22,18 @@ const emptyDraft: Draft = {
   password: '',
   role: 'user',
   disabled: false,
+  generationLimit: '',
 }
 
 function formatTime(value: number) {
   if (!value) return '-'
   return new Date(value).toLocaleString()
+}
+
+function formatQuota(user: AdminUser) {
+  return user.generationLimit == null
+    ? `已用 ${user.generationUsed} / 不限`
+    : `已用 ${user.generationUsed} / ${user.generationLimit}`
 }
 
 export default function UserAdminModal({ onClose }: Props) {
@@ -52,6 +60,7 @@ export default function UserAdminModal({ onClose }: Props) {
       password: '',
       role: user.role,
       disabled: user.disabled,
+      generationLimit: user.generationLimit == null ? '' : String(user.generationLimit),
     })
     setError('')
   }
@@ -89,10 +98,16 @@ export default function UserAdminModal({ onClose }: Props) {
     setSaving(true)
     setError('')
     try {
+      const limitText = draft.generationLimit.trim()
+      const generationLimit = limitText === '' ? null : Number(limitText)
+      if (generationLimit != null && (!Number.isFinite(generationLimit) || generationLimit < 0)) {
+        throw new Error('生成次数必须为空或非负整数')
+      }
       const payload = {
         displayName: draft.displayName.trim(),
         role: draft.role,
         disabled: draft.disabled,
+        generationLimit: generationLimit == null ? null : Math.floor(generationLimit),
         ...(draft.password.trim() ? { password: draft.password } : {}),
       }
       const nextUsers = isCreating
@@ -194,6 +209,8 @@ export default function UserAdminModal({ onClose }: Props) {
                       <span>{user.taskCount ?? 0} 条记录</span>
                       <span>·</span>
                       <span>{user.imageCount ?? 0} 张图片</span>
+                      <span>·</span>
+                      <span>{formatQuota(user)}</span>
                       {user.disabled && <span className="text-red-400">· 已禁用</span>}
                     </div>
                   </button>
@@ -255,7 +272,25 @@ export default function UserAdminModal({ onClose }: Props) {
                   <option value="admin">管理员</option>
                 </select>
               </label>
+              <label className="block">
+                <span className="mb-1 block text-xs text-gray-500 dark:text-gray-400">可生成次数</span>
+                <input
+                  value={draft.generationLimit}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, generationLimit: e.target.value }))}
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="留空表示不限"
+                  className="w-full rounded-2xl border border-gray-200/70 bg-white/70 px-4 py-3 text-sm outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-gray-100"
+                />
+              </label>
             </div>
+
+            {!isCreating && selectedUser && (
+              <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+                生成次数：{formatQuota(selectedUser)}
+              </div>
+            )}
 
             <label className="mt-4 flex items-center justify-between gap-4 rounded-2xl border border-gray-200/70 bg-gray-50/70 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.04]">
               <span>

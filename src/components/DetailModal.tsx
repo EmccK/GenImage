@@ -558,6 +558,7 @@ export default function DetailModal() {
 
             {/* 时间 */}
             <div className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+              {task.ownerUsername && <span>用户 {task.ownerDisplayName || task.ownerUsername} · </span>}
               <span>创建于 {formatTime(task.createdAt)}</span>
               {formatDuration() && <span> · 耗时 {formatDuration()}</span>}
             </div>

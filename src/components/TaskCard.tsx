@@ -227,6 +227,11 @@ export default function TaskCard({
       <div className="flex h-40">
         {/* 左侧图片区域 */}
         <div className="w-40 min-w-[10rem] h-full bg-gray-100 dark:bg-black/20 relative flex items-center justify-center overflow-hidden flex-shrink-0">
+          {task.ownerUsername && (
+            <span className="absolute right-1.5 top-1.5 z-10 max-w-[8rem] truncate rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+              {task.ownerDisplayName || task.ownerUsername}
+            </span>
+          )}
           {task.status === 'running' && (
             <div className="flex flex-col items-center gap-2">
               <svg

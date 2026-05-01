@@ -34,6 +34,8 @@ export interface AdminUser {
   displayName: string
   role: 'admin' | 'user'
   disabled: boolean
+  generationLimit: number | null
+  generationUsed: number
   createdAt: number
   updatedAt: number
   taskCount?: number
@@ -134,6 +136,8 @@ function normalizeAdminUser(value: unknown): AdminUser | null {
     displayName: typeof value.displayName === 'string' ? value.displayName : value.username,
     role: value.role === 'admin' ? 'admin' : 'user',
     disabled: Boolean(value.disabled),
+    generationLimit: typeof value.generationLimit === 'number' ? value.generationLimit : null,
+    generationUsed: typeof value.generationUsed === 'number' ? value.generationUsed : 0,
     createdAt: typeof value.createdAt === 'number' ? value.createdAt : 0,
     updatedAt: typeof value.updatedAt === 'number' ? value.updatedAt : 0,
     taskCount: typeof value.taskCount === 'number' ? value.taskCount : undefined,
@@ -259,11 +263,23 @@ async function serverRequest<T>(path: string, init: RequestInit = {}): Promise<T
 
 export const serverDb = {
   getAllTasks: () => serverRequest<TaskRecord[]>('/tasks'),
-  putTask: (task: TaskRecord) => serverRequest<IDBValidKey>(`/tasks/${encodeURIComponent(task.id)}`, {
-    method: 'PUT',
-    body: JSON.stringify(task),
-  }),
-  deleteTask: (id: string) => serverRequest<undefined>(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  putTask: (task: TaskRecord) => {
+    const ownerQuery = currentConfig.isAdmin && task.ownerUsername
+      ? `?owner=${encodeURIComponent(task.ownerUsername)}`
+      : ''
+    return serverRequest<IDBValidKey>(`/tasks/${encodeURIComponent(task.id)}${ownerQuery}`, {
+      method: 'PUT',
+      body: JSON.stringify(task),
+    })
+  },
+  deleteTask: (taskOrId: TaskRecord | string) => {
+    const id = typeof taskOrId === 'string' ? taskOrId : taskOrId.id
+    const ownerUsername = typeof taskOrId === 'string' ? undefined : taskOrId.ownerUsername
+    const ownerQuery = currentConfig.isAdmin && ownerUsername
+      ? `?owner=${encodeURIComponent(ownerUsername)}`
+      : ''
+    return serverRequest<undefined>(`/tasks/${encodeURIComponent(id)}${ownerQuery}`, { method: 'DELETE' })
+  },
   clearTasks: () => serverRequest<undefined>('/tasks/clear', { method: 'POST' }),
 
   getImage: async (id: string) => {
@@ -295,6 +311,7 @@ export const adminApi = {
     displayName?: string
     role?: AdminUser['role']
     disabled?: boolean
+    generationLimit?: number | null
   }) => {
     const users = await serverRequest<unknown[]>('/admin/users', {
       method: 'POST',
@@ -307,6 +324,7 @@ export const adminApi = {
     displayName?: string
     role?: AdminUser['role']
     disabled?: boolean
+    generationLimit?: number | null
   }) => {
     const users = await serverRequest<unknown[]>(`/admin/users/${encodeURIComponent(username)}`, {
       method: 'PUT',

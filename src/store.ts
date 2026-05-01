@@ -61,6 +61,10 @@ function orderImagesWithMaskFirst(images: InputImage[], maskTargetImageId: strin
 // ===== Store 类型 =====
 
 interface AppState {
+  // 启动状态
+  storageReady: boolean
+  setStorageReady: (ready: boolean) => void
+
   // 设置
   settings: AppSettings
   setSettings: (s: Partial<AppSettings>) => void
@@ -136,6 +140,10 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
+      // Boot
+      storageReady: false,
+      setStorageReady: (storageReady) => set({ storageReady }),
+
       // Settings
       settings: { ...DEFAULT_SETTINGS },
       setSettings: (s) => set((st) => ({
@@ -316,8 +324,10 @@ function normalizeParamsForSettings(params: TaskParams, settings: AppSettings): 
 
 /** 初始化：从 IndexedDB 加载任务和图片缓存，清理孤立图片 */
 export async function initStore() {
+  useStore.getState().setStorageReady(false)
   const tasks = await getAllTasks()
   useStore.getState().setTasks(tasks)
+  useStore.getState().setStorageReady(true)
 
   // 服务端历史模式下按需加载图片，避免首次进入时一次性拉取 VPS 上所有历史图片。
   if (isServerStorageEnabled()) return
@@ -623,8 +633,8 @@ export async function removeMultipleTasks(taskIds: string[]) {
   }
 
   setTasks(remaining)
-  for (const id of taskIds) {
-    await dbDeleteTask(id)
+  for (const task of tasks) {
+    if (toDelete.has(task.id)) await dbDeleteTask(task)
   }
 
   // 找出其他任务仍引用的图片
@@ -667,7 +677,7 @@ export async function removeTask(task: TaskRecord) {
   // 从列表移除
   const remaining = tasks.filter((t) => t.id !== task.id)
   setTasks(remaining)
-  await dbDeleteTask(task.id)
+  await dbDeleteTask(task)
 
   // 找出其他任务仍引用的图片
   const stillUsed = new Set<string>()

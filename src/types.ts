@@ -91,6 +91,9 @@ export interface TaskRecord {
   elapsed: number | null
   /** 是否收藏 */
   isFavorite?: boolean
+  /** 管理员查看所有历史时标记记录所属用户 */
+  ownerUsername?: string
+  ownerDisplayName?: string
 }
 
 // ===== IndexedDB 存储的图片 =====
