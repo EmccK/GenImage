@@ -28,6 +28,7 @@ services:
       SERVER_STORAGE: "true"
 
       API_PROXY_URL: "https://api.openai.com/v1"
+      ENABLE_API_PROXY: "true"
       APP_API_KEY: "sk-xxxx"
       APP_API_MODE: "images"
       APP_MODEL: "gpt-image-2"
@@ -62,6 +63,7 @@ docker compose up -d
 | `SERVER_STORAGE` | 设为 `true` 后保存历史记录和图片到 `/data`。 |
 | `DATA_DIR` | 数据目录，默认 `/data`；用户信息在 `users.json`，各用户历史在 `users/<用户名>/`。 |
 | `API_PROXY_URL` | 实际 OpenAI 兼容 API 地址，默认 `https://api.openai.com/v1`。 |
+| `ENABLE_API_PROXY` | 是否启用同源 API 代理；设置 `APP_API_KEY` 后默认启用，也可显式设为 `true`。 |
 | `APP_API_KEY` | 服务端持有的 API Key，不下发到浏览器；设置后默认启用同源代理。 |
 | `APP_API_MODE` | `images` 或 `responses`。 |
 | `APP_MODEL` | 模型名，如 `gpt-image-2`。 |

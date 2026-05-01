@@ -22,7 +22,6 @@ ENV PORT=80
 ENV DATA_DIR=/data
 ENV DEFAULT_API_URL=
 ENV API_PROXY_URL=
-ENV ENABLE_API_PROXY=false
 ENV SERVER_STORAGE=false
 
 COPY --from=build /app/dist ./dist
