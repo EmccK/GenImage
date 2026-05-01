@@ -113,7 +113,7 @@ export default function TaskCard({
     setCoverRatio('')
     setCoverSize('')
 
-    if (task.outputImages?.[0]) {
+    if (task.outputImages[0]) {
       const cached = getCachedImage(task.outputImages[0])
       if (cached) {
         setThumbSrc(cached)
@@ -160,7 +160,7 @@ export default function TaskCard({
     const ss = String(seconds % 60).padStart(2, '0')
     return `${mm}:${ss}`
   })()
-  const aggregateActualParams = task.outputImages?.length
+  const aggregateActualParams = task.outputImages.length
     ? { ...task.actualParams, n: task.outputImages.length }
     : task.actualParams
   const isSwipeReady = Math.abs(swipeOffset) >= 40
@@ -407,7 +407,7 @@ export default function TaskCard({
                 onClick={onEditOutputs}
                 className="p-1.5 rounded-md hover:bg-green-50 dark:hover:bg-green-950/30 text-gray-400 hover:text-green-500 transition disabled:opacity-30"
                 title="编辑输出"
-                disabled={!task.outputImages?.length}
+                disabled={!task.outputImages.length}
               >
                 <svg
                   className="w-4 h-4"

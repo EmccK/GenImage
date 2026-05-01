@@ -54,8 +54,8 @@ export default function DetailModal() {
 
     let cancelled = false
     const ids = [...new Set([
-      ...(task.outputImages || []),
-      ...(task.inputImageIds || []),
+      ...task.outputImages,
+      ...task.inputImageIds,
       ...(task.maskImageId ? [task.maskImageId] : []),
     ])]
     const initial: Record<string, string> = {}
@@ -76,7 +76,7 @@ export default function DetailModal() {
     }
   }, [task])
 
-  const currentOutputImageId = task?.outputImages?.[imageIndex] || ''
+  const currentOutputImageId = task?.outputImages[imageIndex] || ''
   const currentOutputImageSrc = currentOutputImageId ? imageSrcs[currentOutputImageId] || '' : ''
   const maskTargetId = task?.maskTargetImageId || null
   const maskTargetSrc = maskTargetId ? imageSrcs[maskTargetId] || '' : ''
@@ -153,7 +153,7 @@ export default function DetailModal() {
 
   if (!task) return null
 
-  const outputLen = task.outputImages?.length || 0
+  const outputLen = task.outputImages.length
   const currentImageRatio = currentOutputImageId ? imageRatios[currentOutputImageId] : ''
   const currentImageSize = currentOutputImageId ? imageSizes[currentOutputImageId] : ''
   const currentActualParams = currentOutputImageId ? task.actualParamsByImage?.[currentOutputImageId] : undefined
@@ -194,7 +194,7 @@ export default function DetailModal() {
   }
 
   const handleMaskEditCurrentOutput = () => {
-    const imgId = task.outputImages?.[imageIndex]
+    const imgId = task.outputImages[imageIndex]
     if (!imgId) return
     setMaskEditorImageId(imgId)
     setDetailTaskId(null)

@@ -30,7 +30,7 @@ export default function SettingsModal() {
   }, [apiProxyAvailable, showSettings, settings])
 
   const commitSettings = (nextDraft: AppSettings) => {
-    const apiMode = nextDraft.apiMode === 'responses' ? 'responses' : DEFAULT_SETTINGS.apiMode
+    const apiMode = nextDraft.apiMode
     const defaultModel = getDefaultModelForMode(apiMode)
     const normalizedDraft = {
       ...nextDraft,
@@ -218,7 +218,7 @@ export default function SettingsModal() {
               <label className="block">
                 <span className="block text-xs text-gray-500 dark:text-gray-400 mb-1">API 接口</span>
                 <Select
-                  value={draft.apiMode ?? DEFAULT_SETTINGS.apiMode}
+                  value={draft.apiMode}
                   onChange={(value) => {
                     const apiMode = value as AppSettings['apiMode']
                     const nextModel =
@@ -249,11 +249,11 @@ export default function SettingsModal() {
                   onChange={(e) => setDraft((prev) => ({ ...prev, model: e.target.value }))}
                   onBlur={(e) => commitSettings({ ...draft, model: e.target.value })}
                   type="text"
-                  placeholder={getDefaultModelForMode(draft.apiMode ?? DEFAULT_SETTINGS.apiMode)}
+                  placeholder={getDefaultModelForMode(draft.apiMode)}
                   className="w-full rounded-xl border border-gray-200/70 bg-white/60 px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-300 dark:border-white/[0.08] dark:bg-white/[0.03] dark:text-gray-200 dark:focus:border-blue-500/50"
                 />
                 <div data-selectable-text className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-                  {(draft.apiMode ?? DEFAULT_SETTINGS.apiMode) === 'responses' ? (
+                  {draft.apiMode === 'responses' ? (
                     <>Responses API 需要使用支持 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">image_generation</code> 工具的文本模型，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">{DEFAULT_RESPONSES_MODEL}</code>。</>
                   ) : (
                     <>Images API 需要使用 GPT Image 模型，例如 <code className="rounded bg-gray-100 px-1 py-0.5 dark:bg-white/[0.06]">{DEFAULT_IMAGES_MODEL}</code>。</>

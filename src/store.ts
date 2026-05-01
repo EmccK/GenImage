@@ -141,12 +141,7 @@ export const useStore = create<AppState>()(
         settings: {
           ...st.settings,
           ...s,
-          apiMode:
-            s.apiMode === 'images' || s.apiMode === 'responses'
-              ? s.apiMode
-              : st.settings.apiMode ?? DEFAULT_SETTINGS.apiMode,
-          codexCli: s.codexCli ?? st.settings.codexCli ?? DEFAULT_SETTINGS.codexCli,
-          apiProxy: s.apiProxy ?? st.settings.apiProxy ?? DEFAULT_SETTINGS.apiProxy,
+          apiMode: s.apiMode ?? st.settings.apiMode,
         },
       })),
       dismissedCodexCliPrompts: [],
@@ -326,9 +321,9 @@ export async function initStore() {
   // 收集所有任务引用的图片 id
   const referencedIds = new Set<string>()
   for (const t of tasks) {
-    for (const id of t.inputImageIds || []) referencedIds.add(id)
+    for (const id of t.inputImageIds) referencedIds.add(id)
     if (t.maskImageId) referencedIds.add(t.maskImageId)
-    for (const id of t.outputImages || []) referencedIds.add(id)
+    for (const id of t.outputImages) referencedIds.add(id)
   }
 
   // 预加载所有图片到缓存，同时清理孤立图片
@@ -537,8 +532,8 @@ export async function retryTask(task: TaskRecord) {
     prompt: task.prompt,
     params: normalizedParams,
     inputImageIds: [...task.inputImageIds],
-    maskTargetImageId: task.maskTargetImageId ?? null,
-    maskImageId: task.maskImageId ?? null,
+    maskTargetImageId: task.maskTargetImageId,
+    maskImageId: task.maskImageId,
     outputImages: [],
     status: 'running',
     error: null,
@@ -569,7 +564,7 @@ export async function reuseConfig(task: TaskRecord) {
     }
   }
   setInputImages(imgs)
-  const maskTargetImageId = task.maskTargetImageId ?? (task.maskImageId ? task.inputImageIds[0] : null)
+  const maskTargetImageId = task.maskTargetImageId
   if (maskTargetImageId && task.maskImageId && imgs.some((img) => img.id === maskTargetImageId)) {
     const maskDataUrl = await ensureImageCached(task.maskImageId)
     if (maskDataUrl) {
@@ -590,7 +585,7 @@ export async function reuseConfig(task: TaskRecord) {
 /** 编辑输出：将输出图加入输入 */
 export async function editOutputs(task: TaskRecord) {
   const { inputImages, addInputImage, showToast } = useStore.getState()
-  if (!task.outputImages?.length) return
+  if (!task.outputImages.length) return
 
   let added = 0
   for (const imgId of task.outputImages) {
@@ -617,9 +612,9 @@ export async function removeMultipleTasks(taskIds: string[]) {
   const deletedImageIds = new Set<string>()
   for (const t of tasks) {
     if (toDelete.has(t.id)) {
-      for (const id of t.inputImageIds || []) deletedImageIds.add(id)
+      for (const id of t.inputImageIds) deletedImageIds.add(id)
       if (t.maskImageId) deletedImageIds.add(t.maskImageId)
-      for (const id of t.outputImages || []) deletedImageIds.add(id)
+      for (const id of t.outputImages) deletedImageIds.add(id)
     }
   }
 
@@ -631,9 +626,9 @@ export async function removeMultipleTasks(taskIds: string[]) {
   // 找出其他任务仍引用的图片
   const stillUsed = new Set<string>()
   for (const t of remaining) {
-    for (const id of t.inputImageIds || []) stillUsed.add(id)
+    for (const id of t.inputImageIds) stillUsed.add(id)
     if (t.maskImageId) stillUsed.add(t.maskImageId)
-    for (const id of t.outputImages || []) stillUsed.add(id)
+    for (const id of t.outputImages) stillUsed.add(id)
   }
   for (const img of inputImages) stillUsed.add(img.id)
 
@@ -660,9 +655,9 @@ export async function removeTask(task: TaskRecord) {
 
   // 收集此任务关联的图片
   const taskImageIds = new Set([
-    ...(task.inputImageIds || []),
+    ...task.inputImageIds,
     ...(task.maskImageId ? [task.maskImageId] : []),
-    ...(task.outputImages || []),
+    ...task.outputImages,
   ])
 
   // 从列表移除
@@ -673,9 +668,9 @@ export async function removeTask(task: TaskRecord) {
   // 找出其他任务仍引用的图片
   const stillUsed = new Set<string>()
   for (const t of remaining) {
-    for (const id of t.inputImageIds || []) stillUsed.add(id)
+    for (const id of t.inputImageIds) stillUsed.add(id)
     if (t.maskImageId) stillUsed.add(t.maskImageId)
-    for (const id of t.outputImages || []) stillUsed.add(id)
+    for (const id of t.outputImages) stillUsed.add(id)
   }
   for (const img of inputImages) stillUsed.add(img.id)
 
@@ -733,20 +728,6 @@ export async function exportData() {
     const images = await getAllImages()
     const { settings } = useStore.getState()
     const exportedAt = Date.now()
-    const imageCreatedAtFallback = new Map<string, number>()
-
-    for (const task of tasks) {
-      for (const id of [
-        ...(task.inputImageIds || []),
-        ...(task.maskImageId ? [task.maskImageId] : []),
-        ...(task.outputImages || []),
-      ]) {
-        const prev = imageCreatedAtFallback.get(id)
-        if (prev == null || task.createdAt < prev) {
-          imageCreatedAtFallback.set(id, task.createdAt)
-        }
-      }
-    }
 
     const imageFiles: ExportData['imageFiles'] = {}
     const zipFiles: Record<string, Uint8Array | [Uint8Array, { mtime: Date }]> = {}
@@ -754,7 +735,7 @@ export async function exportData() {
     for (const img of images) {
       const { ext, bytes } = dataUrlToBytes(img.dataUrl)
       const path = `images/${img.id}.${ext}`
-      const createdAt = img.createdAt ?? imageCreatedAtFallback.get(img.id) ?? exportedAt
+      const createdAt = img.createdAt
       imageFiles[img.id] = { path, createdAt, source: img.source }
       zipFiles[path] = [bytes, { mtime: new Date(createdAt) }]
     }
@@ -798,10 +779,19 @@ export async function importData(file: File) {
     if (!manifestBytes) throw new Error('ZIP 中缺少 manifest.json')
 
     const data: ExportData = JSON.parse(strFromU8(manifestBytes))
-    if (!data.tasks || !data.imageFiles) throw new Error('无效的数据格式')
+    if (data.version !== 2 || !data.settings || !Array.isArray(data.tasks) || !data.imageFiles) {
+      throw new Error('无效的数据格式')
+    }
 
     // 还原图片
     for (const [id, info] of Object.entries(data.imageFiles)) {
+      if (
+        !info.path ||
+        typeof info.createdAt !== 'number' ||
+        (info.source !== 'upload' && info.source !== 'generated' && info.source !== 'mask')
+      ) {
+        throw new Error('无效的图片清单')
+      }
       const bytes = unzipped[info.path]
       if (!bytes) continue
       const dataUrl = bytesToDataUrl(bytes, info.path)
@@ -813,9 +803,7 @@ export async function importData(file: File) {
       await putTask(task)
     }
 
-    if (data.settings) {
-      useStore.getState().setSettings(data.settings)
-    }
+    useStore.getState().setSettings(data.settings)
 
     const tasks = await getAllTasks()
     useStore.getState().setTasks(tasks)
